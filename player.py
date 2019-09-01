@@ -1,16 +1,24 @@
 
-class player:
+class Player:
     id = 0
     name = ""
     cards = []
-    def __init__(self, *args, **kwargs):
-
-        return super().__init__(*args, **kwargs)
-    
+    state = ""
+    def __init__(self, player_id ):
+        self.id = player_id 
+        self.state = "NONE"
 
     def is_bluffing(self,action):
         return not ( cards[0].is_eligable_action(action) or cards[1].is_eligable_action(action) )
+    
+    def get_id(self):
+        return self.id
 
+    def get_state(self):
+        return self.state
+
+    def set_state(self,state):
+        self.state = state
     # def income(self):
     #     self.coins += 1
 

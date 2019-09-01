@@ -1,18 +1,41 @@
-import player
+from player import Player
+from Card import Card
+import uuid
 class Game:
+    id = 0
+    last_action_time = 0
     turn = 0
     cards = []
     players = []
     state = "" #Challenging, Over, Acting, Revealing, Starting
 
-    def _init_(self,player_list):
-        state = "Starting"
-        turn = player_list[0]
+    def __init__(self,player_list,start_time):
+        self.id = uuid.uuid4().time_low
+        self.last_action_time = start_time
+        self.state = "Starting"
         for p in player_list:
-            players.append(Player(p))
+            self.players.append(Player(p))
         for i in range(3):
-            cards.append(Card('Duke', ['TAX','FOA']))
-            cards.append(Card('Captain', ['STE','BLK'])) #Block steal
-            cards.append(Card('Ambassador', ['EXC','BLK'])) #Block steal
-            cards.append(Card('Assassin', ['ASI']))
-            cards.append(Card('Contessa', ['BLO'])) #Block assassinationi
+            self.cards.append(Card('Duke', ['TAX','FOA']))
+            self.cards.append(Card('Captain', ['STE','BLK'])) #Block steal
+            self.cards.append(Card('Ambassador', ['EXC','BLK'])) #Block steal
+            self.cards.append(Card('Assassin', ['ASI']))
+            self.cards.append(Card('Contessa', ['BLO'])) #Block assassinationi
+
+    def get_players(self):
+        return self.players
+    def get_last_action_time(self):
+        
+        return self.last_action_time
+    def get_state(self):
+        return self.state
+
+    def set_state(self,state):
+        self.state = state
+        
+    def set_last_action_time(self,time):
+        self.last_action_time = time
+        
+        return 1
+    def get_id(self):
+        return self.id
