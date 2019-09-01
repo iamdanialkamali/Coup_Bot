@@ -1,8 +1,5 @@
-class Game:
-    cards = []
 
 
-class card:
     
 
 from telegram.ext import Updater
