@@ -2,6 +2,7 @@
 class Player:
     id = 0
     name = ""
+    coins = 0
     cards = []
     state = ""
     def __init__(self, player_id ):

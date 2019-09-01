@@ -1,6 +1,6 @@
 from player import Player
 from Card import Card
-import uuid
+import uuid,random
 class Game:
     id = 0
     last_action_time = 0
@@ -21,6 +21,16 @@ class Game:
             self.cards.append(Card('Ambassador', ['EXC','BLK'])) #Block steal
             self.cards.append(Card('Assassin', ['ASI']))
             self.cards.append(Card('Contessa', ['BLO'])) #Block assassinationi
+    
+
+    def start(self):
+        random.shuffle(self.cards)
+        for player in self.players:
+            player.cards.append(self.cards.pop())
+            player.cards.append(self.cards.pop())
+            player.coins = 2
+        turn = self.players[0].id
+        self.state = "Acting" 
 
     def get_players(self):
         return self.players

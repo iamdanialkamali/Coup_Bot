@@ -46,6 +46,11 @@ def game_handler():
             if(next_state=="Ready"):
                 print("SAY GOODBYE MOONMEN")
             games[game_index].set_state(next_state)
+        if(games[game_index].get_state() == "Ready"):
+            games[game_index].start()
+        if(games[game_index].get_state() == "Acting"):
+            print("YES!!")
+
 
                 
 def button_handler(update, context):
