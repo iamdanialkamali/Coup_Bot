@@ -5,15 +5,6 @@ class Game:
 class card:
     
 
-
-
-
-
-
-
-
-
-
 from telegram.ext import Updater
 updater = Updater(token='747856178:AAG55_tg9z-7HK8nCkN5g1B1Eah9s0fmzuo', use_context=True)
 
