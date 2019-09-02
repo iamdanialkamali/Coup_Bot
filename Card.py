@@ -7,10 +7,14 @@ class Card:
         self.name = card_name
         self.action = card_action
         self.state = "active"
+    
+    def get_name(self):
+        return self.name
     def get_action(self):
 
         return self.action
-
+    def get_state(self):
+        return self.state
     def is_eligable_action(self,action):
         return action in  self.get_action()   and self.state == "active"
 

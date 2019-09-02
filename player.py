@@ -15,14 +15,19 @@ class Player:
 
     def get_name(self):
         return self.name
+    
     def is_bluffing(self,action):
         return not ( self.cards[0].is_eligable_action(action) or self.cards[1].is_eligable_action(action) )
+    
+    def has_card(self,card_name):
+        return not (( self.cards[0].get_name() == card_name and self.cards[0].state == "active")  or  ( self.cards[1].get_name() == card_name and  self.cards[0].state == "active" ))
     
     def set_coins(self,count):
         self.coins = count
     
-    def get_coins(self,count):
+    def get_coins(self):
         return self.coins
+    
     def get_rubbed(self):
         if(self.coins - 2 >= 0 ):
             self.coins = self.coins - 2    

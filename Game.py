@@ -9,6 +9,8 @@ class Game:
     cards = []
     players = []
     action = ""
+    reaction_card = ""
+    reacting_player = ""
     state = "" #Challenging, Over, Acting, Revealing, Starting
     target_player = ""
     
@@ -17,6 +19,7 @@ class Game:
         self.last_action_time = start_time
         self.state = "Starting"
         self.target_player = ""
+        self.reaction = ""
         for p in player_list:
             self.players.append(Player(p))
         for i in range(3):
@@ -26,13 +29,14 @@ class Game:
             self.cards.append(Card('Assassin', ['ASSASINATE']))
             self.cards.append(Card('Contessa', ['BLOCK_ASSASIANTE'])) #Block assassinationi
 
-
+    def get_target_player(self):
+        return self.target_player
     def perform(self):
         if(self.action == "TAX"):
-            self.players[self.turn].tax()
+            self.players[self.get_turn()].tax()
         if(self.action == "STEAL"):
             profit = self.target_player.get_rubbed()
-            self.players[self.turn].set_coins(self.players[self.turn].get_coins() + profit )
+            self.players[self.get_turn()].set_coins(self.players[self.get_turn()].get_coins() + profit )
         if(self.action == "COUP"):
             self.target_player.kill_one_card()
         if(self.action == "ASSASINATE" ):
@@ -41,6 +45,19 @@ class Game:
             pass
 
         self.next_turn()
+
+    
+    def get_reaction_card(self):
+        return self.reaction_card
+
+
+    def set_reaction_card(self , reaction_card):
+        self.reaction_card = reaction_card
+
+
+    def get_turn_counter(self):
+        return self.turn
+
 
     def set_target_player(self,target_player_chat_id):
         
@@ -56,9 +73,17 @@ class Game:
             return True
         else:
             return False
-    
+    def check_react_challenge(self):
+        if(self.get_target_player().has_card(self.reaction_card)):
+            self.get_players()[self.get_turn()].kill_one_card()
+            return False
+        else:
+            self.get_target_player().kill_one_card()
+            return True
+
+
     def check_challenge(self,player_chat_id):
-        playing_player_index = self.turn
+        playing_player_index = self.get_turn()
         challenging_player_chat_id = player_chat_id
 
         for player in self.players:
@@ -69,6 +94,8 @@ class Game:
 
         if(is_bluffing):
             self.players[playing_player_index].kill_one_card()
+            self.next_turn()
+            self.state = "Acting"
             return True
         else:
             challenging_player.kill_one_card()
@@ -89,12 +116,12 @@ class Game:
         return 1
     
     def get_turn(self):
-        return self.turn
+        return self.turn % len(self.players)
         
     def next_turn(self):
-        for i in range(self.turn+1,len(self.players)):
-            if(self.players[i].get_state()!= "DEAD"):
-                self.turn = i
+        for i in range(self.turn+1,5000):
+            if(self.players[i % len(self.players)].get_state()!= "DEAD"):
+                self.turn = i 
                 break
         return True
 

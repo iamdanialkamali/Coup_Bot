@@ -22,27 +22,36 @@ def make_actions_keyborad(game_id):
 
     return actions_keyboard
 
+
 def make_challenge_keyboard(game,player_index):
     
-    keyboard = [[InlineKeyboardButton("CHALLENGE", callback_data="CHALLENGE|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))]] 
+    keyboard = [[InlineKeyboardButton("CHALLENGE", callback_data="CHALLENGE|{}|{}|{}".format(game.get_id(), game.get_players()[game.get_turn()].get_id().message.chat_id,game.get_turn_counter()))]] 
     if(game.get_players()[player_index] == game.target_player):
         if(game.get_action() == "ASSASINATE"):
-            keyboard.append([InlineKeyboardButton("Contessa", callback_data="REACTION|BLOCK_ASSASIANTE|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
+            keyboard.append([InlineKeyboardButton("Contessa", callback_data="REACTION|Contessa|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
         if(game.get_action() == "STEAL"):
             keyboard.append([InlineKeyboardButton("Ambassador", callback_data="REACTION|Ambassador|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
             keyboard.append([InlineKeyboardButton("Capitan", callback_data="REACTION|Capitan|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
             
     return keyboard
+
+
+def make_react_challenge_keyboard(game,player_index):
+    
+    keyboard = [[InlineKeyboardButton("REACT CHALLENGE", callback_data="REACT_CHALLENGE|{}|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id,game.get_turn_counter()))]]         
+    return keyboard
+
+
 def make_players_keyborad(game):
     keyboard = []
    
     for player_index in range(len(game.get_players())):
         if(player_index != game.get_turn() and  game.get_players()[player_index].get_state() != "DEAD" ):
-            keyboard.append([InlineKeyboardButton(game.get_players()[player_index].get_name(), callback_data="PLAYER|{}|{}".format(game.get_id(), player_index))])
+            keyboard.append([InlineKeyboardButton(game.get_players()[player_index].get_name(), callback_data="PLAYER|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
 
     return keyboard
-     
-                    
+
+
 def start(update, context):
     context.bot.send_message(chat_id=update.message.chat_id, text="Welcome to IUST Coup bot")
 
@@ -112,7 +121,8 @@ def game_handler():
             a = time.time()
             b = games[game_index].last_action_time
             if( a - b  > 10 ):
-                games[game_index].set_state("Performig")
+                
+                games[game_index].set_state("Performing")
         
         if(games[game_index].get_state() == "Sending_Players_Btn"):
             for player_index in range(len(games[game_index].get_players())):
@@ -126,6 +136,17 @@ def game_handler():
         if(games[game_index].get_state() == "Performing"):
             games[game_index].perform()
             games[game_index].set_state("Acting")
+
+        if(games[game_index].get_state() == "Sending_React_Challenge_Btn"):
+            for player_index in range(len(games[game_index].get_players())):
+                if(games[game_index].get_players()[player_index] != games[game_index].get_target_player() ):
+                    keyboard = make_react_challenge_keyboard(games[game_index],player_index ) 
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    games[game_index].get_players()[player_index].get_id().message.reply_text('Wait FOR IT  !!!!  '+ str( games[game_index].get_players()[games[game_index].get_turn()].get_id().message.chat_id) + "IS DOING "+ str(games[game_index].get_action()  ) )
+                    games[game_index].get_players()[player_index].get_id().message.reply_text('READY TO CHALLENGE', reply_markup=reply_markup)
+            games[game_index].set_last_action_time(time.time())
+                 
+            games[game_index].set_state("Wait_For_React_Challenge_Btn")
 
 
 def button_handler(update, context):
@@ -155,6 +176,11 @@ def action_button_handler(update, context):
         game.set_state("Sending_Players_Btn")
         return
     
+    is_challenge_possible = game.check_challenge_possibility() #TODO : CHECK NEEDED
+    if(is_challenge_possible):
+            game.set_state("Sending_Challenge_Btn")
+            return
+    
     game.set_state("Performing")
 
 
@@ -168,7 +194,7 @@ def target_player_handler(update, context):
             if(games[game_index].get_id() == int(game_id) ):
                 game = games[game_index]
     
-    game.set_target_player(target_player_chat_id)
+    game.set_target_player(int(target_player_chat_id))
     
     is_challenge_possible = game.check_challenge_possibility() #TODO : CHECK NEEDED
     
@@ -181,24 +207,63 @@ def target_player_handler(update, context):
 def challenge_button_handler(update, context):
     query = update.callback_query
 
-    state , game_id , target_player_chat_id =  query.data.split("|")
+    state , game_id , target_player_chat_id , turn_counter =  query.data.split("|")
     query.edit_message_text(text="Selected option: {}".format(query.data))
     
     for game_index in range(len(games)):
             if(games[game_index].get_id() == int(game_id) ):
                 game = games[game_index]
     
+    is_bluffing = game.check_challenge(int(target_player_chat_id))
+    if(is_bluffing == False):
+        game.set_state("Performing")
+    else:
+        game.set_state("Acting")
+
+def react_button_handler(update,context):
+    "REACTION|BLOCK_ASSASIANTE|{}|{}"
+    query = update.callback_query
+
+    state , card ,game_id , target_player_chat_id  =  query.data.split("|")
+    query.edit_message_text(text="Selected option: {}".format(query.data))
     
+    for game_index in range(len(games)):
+            if(games[game_index].get_id() == int(game_id) ):
+                game = games[game_index]
+    
+    game.set_reaction_card(card)
+    
+    game.set_state("Sending_React_Challenge_Btn")
 
-    game.set_state("Performing")
 
+def react_challenge_button_handler(update,context):
+    "REACT_CHALLENGE|{}|{}|{}"
+    query = update.callback_query
 
+    state ,game_id , target_player_chat_id , turn_count  =  query.data.split("|")
+    query.edit_message_text(text="Selected option: {}".format(query.data))
+    
+    for game_index in range(len(games)):
+            if(games[game_index].get_id() == int(game_id) ):
+                game = games[game_index]
+    
+    is_bluffing = game.check_react_challenge()
+    
+    if(is_bluffing):
+        game.set_state("Performing")
+    else:
+        game.set_state("Acting")
+
+        
+    # game.set_state("Sending_React_Challenge_Btn")
 
 
 updater.dispatcher.add_handler(CallbackQueryHandler(button_handler,pattern=r'READY'))
 updater.dispatcher.add_handler(CallbackQueryHandler(target_player_handler,pattern=r'PLAYER'))
 updater.dispatcher.add_handler(CallbackQueryHandler(action_button_handler,pattern=r'COMMAND'))
 updater.dispatcher.add_handler(CallbackQueryHandler(challenge_button_handler,pattern=r'CHALLENGE'))
+updater.dispatcher.add_handler(CallbackQueryHandler(react_challenge_button_handler,pattern=r'REACT_CHALLENGE'))
+updater.dispatcher.add_handler(CallbackQueryHandler(react_button_handler,pattern=r'REACT'))
 
 
 start_handler = CommandHandler('start', start)
