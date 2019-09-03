@@ -13,6 +13,7 @@ class Player:
         self.coins = 0
         self.name = name
 
+   
     def get_name(self):
         return self.name
     
@@ -20,8 +21,11 @@ class Player:
         return not ( self.cards[0].is_eligable_action(action) or self.cards[1].is_eligable_action(action) )
     
     def has_card(self,card_name):
-        return not (( self.cards[0].get_name() == card_name and self.cards[0].state == "active")  or  ( self.cards[1].get_name() == card_name and  self.cards[0].state == "active" ))
+        return  (( self.cards[0].get_name() == card_name and self.cards[0].state == "active")  or  ( self.cards[1].get_name() == card_name and  self.cards[0].state == "active" ))
     
+    def clean_cards(self):
+        self.cards = []
+
     def set_coins(self,count):
         self.coins = count
     
@@ -59,26 +63,11 @@ class Player:
 
         return False
     def tax(self):
-        self.income +=3
+        self.coins +=3
      
-    def assasinate(self):
-        return True
     
-    def foreign_aid(self):
-        pass
-    
-    def tax(self):
-        pass
-    
-    def exchange(self):
-        pass
-    
-    def challenge(self):
-        pass
-
     def steal(self):
         self.coins += 2
         pass
 
-    def counter(self):
-        pass
+    

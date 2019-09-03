@@ -13,6 +13,7 @@ class Game:
     reacting_player = ""
     state = "" #Challenging, Over, Acting, Revealing, Starting
     target_player = ""
+    exchanging_cards = []
     
     def __init__(self,player_list,start_time):
         self.id = uuid.uuid4().time_low
@@ -20,6 +21,7 @@ class Game:
         self.state = "Starting"
         self.target_player = ""
         self.reaction = ""
+        self.exchanging_cards = []
         for p in player_list:
             self.players.append(Player(p))
         for i in range(3):
@@ -29,8 +31,36 @@ class Game:
             self.cards.append(Card('Assassin', ['ASSASINATE']))
             self.cards.append(Card('Contessa', ['BLOCK_ASSASIANTE'])) #Block assassinationi
 
+    def get_cards_for_exchange(self):
+        cards = [ card for card in  self.players[self.get_turn()].get_cards() if card.get_state() == "active" ] + self.get_two_random_card()
+        self.exchanging_cards = cards
+
+        self.players[self.get_turn()].clean_cards()
+
+        return cards
+    
+    
+
+    def get_exchanging_cards(self):
+        return self.exchanging_cards
+
+
+    def get_two_random_card(self):
+        random.shuffle(self.cards)
+        random_cards = [
+            self.cards.pop(),self.cards.pop()
+        ]
+        return random_cards
+
+
+    def check_action_is_exchange(self):
+        if(self.action == "EXCHANGE"):
+            return  True
+        return False
+    
     def get_target_player(self):
         return self.target_player
+    
     def perform(self):
         if(self.action == "TAX"):
             self.players[self.get_turn()].tax()
@@ -41,8 +71,8 @@ class Game:
             self.target_player.kill_one_card()
         if(self.action == "ASSASINATE" ):
             self.target_player.kill_one_card()
-        if(self.action == "EXCHANGE"):
-            pass
+        if(self.action == "INCOME"):
+            self.players[self.get_turn()].income()
 
         self.next_turn()
 
@@ -50,7 +80,7 @@ class Game:
     def get_reaction_card(self):
         return self.reaction_card
 
-
+    
     def set_reaction_card(self , reaction_card):
         self.reaction_card = reaction_card
 
@@ -119,6 +149,11 @@ class Game:
         return self.turn % len(self.players)
         
     def next_turn(self):
+        self.target_player = ""
+        self.action = ""
+        self.reaction_card = ""
+        self.reacting_player = ""
+        self.state = "" #Challenging, Over, Acting, Revealing, Starting
         for i in range(self.turn+1,5000):
             if(self.players[i % len(self.players)].get_state()!= "DEAD"):
                 self.turn = i 
