@@ -11,6 +11,7 @@ class Game:
     action = ""
     reaction_card = ""
     reacting_player = ""
+    challenging_player = ""
     state = "" #Challenging, Over, Acting, Revealing, Starting
     target_player = ""
     exchanging_cards = []
@@ -21,6 +22,7 @@ class Game:
         self.state = "Starting"
         self.target_player = ""
         self.reaction = ""
+        self.challenging_player = ""
         self.exchanging_cards = []
         for p in player_list:
             self.players.append(Player(p))
@@ -40,7 +42,8 @@ class Game:
         return cards
     
     
-
+    def get_challenging_player(self):
+        return self.challenging_player
     def get_exchanging_cards(self):
         return self.exchanging_cards
 
@@ -64,19 +67,24 @@ class Game:
     def perform(self):
         if(self.action == "TAX"):
             self.players[self.get_turn()].tax()
+            return None , False
         if(self.action == "STEAL"):
             profit = self.target_player.get_rubbed()
             self.players[self.get_turn()].set_coins(self.players[self.get_turn()].get_coins() + profit )
+            return None , False
         if(self.action == "COUP"):
-            self.target_player.kill_one_card()
-        if(self.action == "ASSASINATE" ):
-            self.target_player.kill_one_card()
+            card , is_dead = self.target_player.kill_one_card()
+            return card , is_dead
+        if(self.action == "ASSASINATE"):
+            card , is_dead = self.target_player.kill_one_card()
+            return card , is_dead
         if(self.action == "INCOME"):
             self.players[self.get_turn()].income()
+            return None , False
 
-        self.next_turn()
+        return None , False
+        
 
-    
     def get_reaction_card(self):
         return self.reaction_card
 
@@ -105,11 +113,11 @@ class Game:
             return False
     def check_react_challenge(self):
         if(self.get_target_player().has_card(self.reaction_card)):
-            self.get_players()[self.get_turn()].kill_one_card()
-            return False
+            card , is_dead  = self.get_players()[self.get_turn()].kill_one_card()
+            return False , card , is_dead
         else:
-            self.get_target_player().kill_one_card()
-            return True
+            card , is_dead  = self.get_target_player().kill_one_card()
+            return True , card , is_dead
 
 
     def check_challenge(self,player_chat_id):
@@ -120,16 +128,16 @@ class Game:
             c = player.get_id().message.chat_id
             if( c == challenging_player_chat_id):
                 challenging_player = player
+                self.challenging_player = player
         is_bluffing = self.players[playing_player_index].is_bluffing(self.action)
 
         if(is_bluffing):
-            self.players[playing_player_index].kill_one_card()
-            self.next_turn()
-            self.state = "Acting"
-            return True
+            card , is_dead = self.players[playing_player_index].kill_one_card()
+           
+            return True , card , is_dead 
         else:
-            challenging_player.kill_one_card()
-            return False   
+            card , is_dead = challenging_player.kill_one_card()
+            return False , card , is_dead   
 
     def check_challenge_possibility(self):
         if(self.action in ['COUP','INCOME']):
@@ -169,9 +177,11 @@ class Game:
         turn = 0
         self.state = "Acting" 
 
+    def get_living_players(self):
+      
+        return  [player for player in self.players if player.state != "Dead"  ]
     def get_players(self):
         return self.players
-    
     def get_last_action_time(self):    
         return self.last_action_time
     

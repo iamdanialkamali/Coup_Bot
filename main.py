@@ -8,10 +8,17 @@ from telegram.ext import Updater
 from telegram.ext import CommandHandler
 
 players_queue = []
+# playing_players = []
 games = []
 updater = Updater(token='747856178:AAG55_tg9z-7HK8nCkN5g1B1Eah9s0fmzuo', use_context=True)
 dispatcher = updater.dispatcher
 
+
+def broadcast_to_players(game, message):
+    for player in game.get_players():
+        player.get_id().message.reply_text(message)
+
+        
 
 def make_exchange_keyborad(game):
     
@@ -52,7 +59,7 @@ def make_challenge_keyboard(game,player_index):
             keyboard.append([InlineKeyboardButton("Contessa", callback_data="REACTION|Contessa|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
         if(game.get_action() == "STEAL"):
             keyboard.append([InlineKeyboardButton("Ambassador", callback_data="REACTION|Ambassador|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
-            keyboard.append([InlineKeyboardButton("Capitan", callback_data="REACTION|Capitan|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
+            keyboard.append([InlineKeyboardButton("Captain", callback_data="REACTION|Captain|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
     if(game.get_action() == "FOREIGN_AID"):
         keyboard.append([InlineKeyboardButton("Duke", callback_data="REACTION|Duke|{}|{}".format(game.get_id(), game.get_players()[player_index].get_id().message.chat_id))])
             
@@ -84,6 +91,12 @@ def play(update, context):
     
     context.bot.send_message(chat_id=update.message.chat_id, text="Wait for other players")
 
+def check_winning(game):
+    c = game.get_living_players()
+    if( len(c) == 1):
+        broadcast_to_players(game , " {} Is Winner ".format(game.get_players()[0].get_name()))
+        return True
+    return False
 
 def match_maker(players_count):
     if(len(players_queue)>=players_count):
@@ -94,14 +107,14 @@ def match_maker(players_count):
             del players_queue[0]
     
 def send_cards_and_coins(game):
-    for player in game.get_players():
+    for player in game.get_living_players():
         
-        cards = ["CARDS"]
+        cards = []
         for card in player.get_cards():
             if(card.get_state() == "active" ):
                 cards.append(card.get_name())
-        player.get_id().message.reply_text(" | ".join(cards))
-        player.get_id().message.reply_text(player.get_coins())
+        player.get_id().message.reply_text( "CARDS : " + " | ".join(cards) )
+        player.get_id().message.reply_text( "Coins : " + str(player.get_coins()) )
 
 def game_handler():
     for game_index in range(len(games)):
@@ -157,7 +170,7 @@ def game_handler():
         if(games[game_index].get_state() == "Wait_For_Challenge_Btn"):
             a = time.time()
             b = games[game_index].last_action_time
-            if( a - b  > 10 ):
+            if( a - b  > 6 ):
                 is_exchange = games[game_index].check_action_is_exchange()
                 if(is_exchange):
                     games[game_index].get_cards_for_exchange()
@@ -178,8 +191,18 @@ def game_handler():
             games[game_index].set_state("Waiting_For_PLayers_Btn")
 
         if(games[game_index].get_state() == "Performing"):
-            games[game_index].perform()
+            card , is_dead = games[game_index].perform()
+            broadcast_to_players(games[game_index],"{} Is Doing {}".format(games[game_index].get_players()[games[game_index].get_turn()].get_name(), games[game_index].get_action()))
+
+            if(card != None and is_dead):
+                broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_handler].get_target_player()))
+                if(check_winning(games[game_index])):
+                    games[game_index].set_state("FINISHED")
+                    return
+
+            games[game_index].next_turn()
             games[game_index].set_state("Acting")
+            
 
         if(games[game_index].get_state() == "Sending_React_Challenge_Btn"):
             for player_index in range(len(games[game_index].get_players())):
@@ -187,7 +210,7 @@ def game_handler():
                     
                     keyboard = make_react_challenge_keyboard(games[game_index],player_index ) 
                     reply_markup = InlineKeyboardMarkup(keyboard)
-                    games[game_index].get_players()[player_index].get_id().message.reply_text( str( games[game_index].get_players()[games[game_index].get_turn()].get_id().effective_user.first_name) + " is doing "+ str(games[game_index].get_reaction_card()  ) )
+                    games[game_index].get_players()[player_index].get_id().message.reply_text( str( games[game_index].get_target_player().get_name()) + " is doing "+ str(games[game_index].get_reaction_card()  ) )
                     games[game_index].get_players()[player_index].get_id().message.reply_text('REACT OR CHALLENGE ?', reply_markup=reply_markup)
             games[game_index].set_last_action_time(time.time())   
             games[game_index].set_state("Wait_For_React_Challenge_Btn")
@@ -195,7 +218,7 @@ def game_handler():
         if(games[game_index].get_state() == "Wait_For_React_Challenge_Btn"):
             a = time.time()
             b = games[game_index].last_action_time
-            if( a - b  > 10):
+            if( a - b  > 6):
                 games[game_index].next_turn()
                 games[game_index].set_state("Acting")
         
@@ -213,7 +236,9 @@ def game_handler():
                  
             games[game_index].set_state("Waiting_For_Exchange_Btn")
 
-
+        if(games[game_index].get_state() == "FINISHED"):
+            del games[game_index]
+            break
 def button_handler(update, context):
     query = update.callback_query
     state , game_id , chat_id  = query.data.split("|")
@@ -298,12 +323,31 @@ def challenge_button_handler(update, context):
     
     if(game.get_state() != "Wait_For_Challenge_Btn"):
         return
-    is_bluffing = game.check_challenge(int(target_player_chat_id))
+    is_bluffing , deactivated_card , is_dead = game.check_challenge(int(target_player_chat_id))
+    
     
     if(is_bluffing):
+        broadcast_to_players(game,"{} was bluffing".format(game.get_players()[game.get_turn()].get_name())  )  
+        broadcast_to_players(game ,"{}'s {} card is killed ".format(game.get_players()[game.get_turn()].get_name() , deactivated_card.get_name() ))
+        if(is_dead):
+            broadcast_to_players(games[game_index] ,"{} is Dead".format(game.get_players()[game.get_turn()].get_name() ))
+            if(check_winning(games[game_index])):
+                game.set_state("FINISHED")
+                return
+
+
+        game.next_turn()
         game.set_state("Acting")
         return
     
+    broadcast_to_players(game,"{} was not bluffing".format(game.get_players()[game.get_turn()].get_name())  )  
+    broadcast_to_players(game ,"{}'s {} card is killed ".format(game.get_challenging_player().get_name() , deactivated_card.get_name() ))
+    if(is_dead):
+            broadcast_to_players(games[game_index] ,"{} is Dead".format(game.get_players()[game.get_turn()].get_name() ))
+            if(check_winning(games[game_index])):
+                game.set_state("FINISHED")
+                return
+
     is_exchange = game.check_action_is_exchange()
     if(is_exchange):
         game.get_cards_for_exchange()
@@ -317,12 +361,17 @@ def react_button_handler(update,context):
     "REACTION|BLOCK_ASSASIANTE|{}|{}"
     query = update.callback_query
 
+    
+  
     state , card ,game_id , target_player_chat_id  =  query.data.split("|")
     # query.edit_message_text(text="Selected option: {}".format(query.data))
     query.edit_message_text(text=card)
     for game_index in range(len(games)):
             if(games[game_index].get_id() == int(game_id) ):
                 game = games[game_index]
+
+    if(game.get_state() != "Wait_For_Challenge_Btn"):
+        return
     if(card == "Duke"):
         game.set_target_player(int(target_player_chat_id))
 
@@ -344,11 +393,32 @@ def react_challenge_button_handler(update,context):
                 game = games[game_index]
     if(game.get_state() != "Wait_For_React_Challenge_Btn"):
         return
-    is_bluffing = game.check_react_challenge()
+    is_bluffing ,deactivated_card , is_dead = game.check_react_challenge()
     
+    # if( is_dead):
+    #     broadcast_to_players(games[int(game_index)] ,"{} is Dead".format(games[int(game_index)].get_target_player()))
+
+
     if(is_bluffing):
+        broadcast_to_players(game,"{} was bluffing".format(game.get_target_player().get_name())  )  
+        broadcast_to_players(game ,"{}'s {} card is killed ".format(game.get_target_player().get_name() , deactivated_card.get_name() ))
+        if( is_dead):
+            broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_handler].get_target_player()))
+            if(check_winning(games[game_index])):
+                game.set_state("FINISHED")
+                return
+
         game.set_state("Performing")
         return
+    
+    broadcast_to_players(game,"{} was not bluffing".format(game.get_players()[game.get_turn()].get_name())  )  
+    if(is_dead):
+            broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_handler].get_players()[game.get_turn()].get_name()))
+            if(check_winning(games[game_index])):
+                game.set_state("FINISHED")
+                return
+
+
 
     is_exchange = game.check_action_is_exchange()
     if(is_exchange):

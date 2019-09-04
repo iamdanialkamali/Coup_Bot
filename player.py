@@ -11,17 +11,27 @@ class Player:
         self.state = "NONE"
         self.cards = []
         self.coins = 0
-        self.name = name
+        self.name = player_id.effective_user.first_name
 
    
     def get_name(self):
         return self.name
     
     def is_bluffing(self,action):
-        return not ( self.cards[0].is_eligable_action(action) or self.cards[1].is_eligable_action(action) )
+        for card in self.get_cards():
+            if(card.is_eligable_action(action)):
+                return False
+
+        return True
+
+        # return not ( self.cards[0].is_eligable_action(action) or self.cards[1].is_eligable_action(action) )
     
     def has_card(self,card_name):
-        return  (( self.cards[0].get_name() == card_name and self.cards[0].state == "active")  or  ( self.cards[1].get_name() == card_name and  self.cards[0].state == "active" ))
+        for card in self.get_cards():
+            if(card.get_name() == card_name):
+                return True
+        return False
+        # return  ( self.cards[0].get_name() == card_name and self.cards[0].state == "active")  or  ( self.cards[1].get_name() == card_name and  self.cards[0].state == "active" )
     
     def clean_cards(self):
         self.cards = []
@@ -42,8 +52,13 @@ class Player:
             return profit
     
     def kill_one_card(self):
-        
-        return random.choice(self.cards).deactive_card()
+        card = random.choice(self.get_cards()).deactive_card()
+        if(len(self.get_cards()) == 0):
+            is_dead = True
+            self.state = "Dead"
+        else:
+            is_dead = False
+        return card , is_dead
         
     def get_id(self):
         return self.id
@@ -57,7 +72,8 @@ class Player:
     def set_state(self,state):
         self.state = state
     def get_cards(self):
-        return self.cards
+        active_cards = [ card for card in self.cards if card.state != "in_active"]
+        return  active_cards
     def income(self):
         self.coins += 1
 
