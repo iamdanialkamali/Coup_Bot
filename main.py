@@ -94,7 +94,7 @@ def play(update, context):
 def check_winning(game):
     c = game.get_living_players()
     if( len(c) == 1):
-        broadcast_to_players(game , " {} Is Winner ".format(game.get_players()[0].get_name()))
+        broadcast_to_players(game , " {} Is Winner ".format(game.get_living_players()[0].get_name()))
         return True
     return False
 
