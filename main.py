@@ -195,7 +195,7 @@ def game_handler():
             broadcast_to_players(games[game_index],"{} Is Doing {}".format(games[game_index].get_players()[games[game_index].get_turn()].get_name(), games[game_index].get_action()))
 
             if(card != None and is_dead):
-                broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_handler].get_target_player()))
+                broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_index].get_target_player()))
                 if(check_winning(games[game_index])):
                     games[game_index].set_state("FINISHED")
                     return
