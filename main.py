@@ -403,7 +403,7 @@ def react_challenge_button_handler(update,context):
         broadcast_to_players(game,"{} was bluffing".format(game.get_target_player().get_name())  )  
         broadcast_to_players(game ,"{}'s {} card is killed ".format(game.get_target_player().get_name() , deactivated_card.get_name() ))
         if( is_dead):
-            broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_handler].get_target_player()))
+            broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_index].get_target_player()))
             if(check_winning(games[game_index])):
                 game.set_state("FINISHED")
                 return
@@ -413,7 +413,7 @@ def react_challenge_button_handler(update,context):
     
     broadcast_to_players(game,"{} was not bluffing".format(game.get_players()[game.get_turn()].get_name())  )  
     if(is_dead):
-            broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_handler].get_players()[game.get_turn()].get_name()))
+            broadcast_to_players(games[game_index] ,"{} is Dead".format(games[game_index].get_players()[game.get_turn()].get_name()))
             if(check_winning(games[game_index])):
                 game.set_state("FINISHED")
                 return
