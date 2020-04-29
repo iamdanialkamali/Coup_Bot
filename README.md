@@ -1,2 +1,2 @@
 # coup_bot
-iust_coup_bot
+Poppular Telegram Bot for Coup BoardGame
